@@ -28,9 +28,11 @@ func main() {
 		VideoTrack: &hls.Track{
 			Codec: &codecs.H264{},
 		},
-		// AudioTrack: &hls.Track{
-		// 	Codec: &codecs.Opus{},
-		// },
+		AudioTrack: &hls.Track{
+			Codec: &codecs.Opus{
+				ChannelCount: 2,
+			},
+		},
 
 		Variant: hls.MuxerVariantLowLatency,
 	}
@@ -38,6 +40,7 @@ func main() {
 	if err := hlsMuxer.Start(); err != nil {
 		log.Fatal(err)
 	}
+	defer hlsMuxer.Close()
 
 	httpServer := &http.Server{
 		Addr:    *httpAddress,
@@ -65,28 +68,59 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	mpegtsReader.OnDecodeError(func(err error) {
+		log.Println("mpeg-ts decoding error occured:", err.Error())
+	})
 
-	var timeDecoder *mpegts.TimeDecoder
+	var (
+		h264TimeDecoder *mpegts.TimeDecoder
+		opusTimeDecoder *mpegts.TimeDecoder
+	)
 
-	found := false
+	var (
+		h264Found = false
+		opusFound = false
+	)
+
+	onDataH264 := func(rawPTS int64, dts int64, au [][]byte) error {
+		if h264TimeDecoder == nil {
+			h264TimeDecoder = mpegts.NewTimeDecoder(rawPTS)
+		}
+		pts := h264TimeDecoder.Decode(rawPTS)
+
+		return hlsMuxer.WriteH264(time.Now(), pts, au)
+	}
+
+	onDataOpus := func(rawPTS int64, packets [][]byte) error {
+		if opusTimeDecoder == nil {
+			opusTimeDecoder = mpegts.NewTimeDecoder(rawPTS)
+		}
+		pts := opusTimeDecoder.Decode(rawPTS)
+
+		return hlsMuxer.WriteOpus(time.Now(), pts, packets)
+	}
+
 	for _, track := range mpegtsReader.Tracks() {
-		if _, ok := track.Codec.(*mpegts.CodecH264); ok {
-			mpegtsReader.OnDataH264(track, func(rawPTS, dts int64, au [][]byte) error {
-				if timeDecoder == nil {
-					timeDecoder = mpegts.NewTimeDecoder(rawPTS)
-				}
-				pts := timeDecoder.Decode(rawPTS)
+		if !h264Found { // find only one h264 track
+			if _, ok := track.Codec.(*mpegts.CodecH264); ok {
+				mpegtsReader.OnDataH264(track, onDataH264)
+				h264Found = true
+				continue
+			}
+		}
 
-				return hlsMuxer.WriteH264(time.Now(), pts, au)
-			})
-
-			found = true
-			break
+		if _, ok := track.Codec.(*mpegts.CodecOpus); ok {
+			mpegtsReader.OnDataOpus(track, onDataOpus)
+			opusFound = true
+			continue
 		}
 	}
 
-	if !found {
-		log.Fatal("streams not found")
+	if !h264Found {
+		log.Fatal("No h264 stream")
+	}
+	if !opusFound {
+		log.Fatal("No opus stream")
 	}
 
 	for {
