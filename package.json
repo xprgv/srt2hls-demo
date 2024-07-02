@@ -8,12 +8,13 @@
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@types/hls.js": "^1.0.0",
+    "@types/node": "^20.14.9",
     "@types/web": "^0.0.148",
+    "hls.js": "^1.5.12",
     "typescript": "^5.4.5",
-    "vite": "^5.2.13",
-    "hls.js": "^1.5.12"
+    "vite": "^5.2.13"
   },
   "author": "",
   "license": "ISC"
