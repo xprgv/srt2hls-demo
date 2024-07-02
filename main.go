@@ -10,6 +10,7 @@ import (
 	"github.com/bluenviron/gohlslib/pkg/codecs"
 	"github.com/bluenviron/mediacommon/pkg/formats/mpegts"
 	srt "github.com/datarhei/gosrt"
+	"github.com/rs/cors"
 	"github.com/spf13/pflag"
 )
 
@@ -17,9 +18,6 @@ var (
 	srtInput    = pflag.String("input", "localhost:3000", "")
 	httpAddress = pflag.String("http", "localhost:8080", "")
 )
-
-//go:embed index.html
-var index []byte
 
 func main() {
 	pflag.Parse()
@@ -44,7 +42,7 @@ func main() {
 
 	httpServer := &http.Server{
 		Addr:    *httpAddress,
-		Handler: handleIndex(hlsMuxer.Handle),
+		Handler: cors.Default().Handler(handleIndex(hlsMuxer.Handle)),
 	}
 
 	go func() {
@@ -132,13 +130,6 @@ func main() {
 
 func handleIndex(wrapped http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(index))
-			return
-		}
-
 		wrapped(w, r)
 	}
 }

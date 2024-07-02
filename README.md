@@ -6,4 +6,6 @@ run
 go run main.go --input=<srt-host> --http=localhost:8080
 ```
 
-and visit `localhost:8080`
+```sh
+npm run dev
+```

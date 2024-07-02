@@ -1,0 +1,20 @@
+{
+  "name": "srt2hls-demo",
+  "version": "1.0.0",
+  "description": "run",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/web": "^0.0.148",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.13",
+    "hls.js": "^1.5.12"
+  },
+  "author": "",
+  "license": "ISC"
+}
